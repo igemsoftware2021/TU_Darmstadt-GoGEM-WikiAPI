@@ -96,7 +96,7 @@ func Logout(client *http.Client, logoutUrl string) error {
 // Upload is the wrapper for the whole upload process.
 // Input: Session, Wiki year, Teamname with spaces as underscore, filepath to the file to upload, offset, if it is a file(media files etc.), and if already uploaded files should be overwritten (already uploaded is determined by a hash compare).
 // Output: String containing the URL to the uploaded file, or an error if something went wrong.
-func Upload(client *http.Client, year int, teamname, pathtofile, offset string, file, force bool) string {
+func Upload(client *http.Client, year int, teamname, pathToFile, offset string, file, force bool) string {
 
 	var err error
 
@@ -112,7 +112,7 @@ func Upload(client *http.Client, year int, teamname, pathtofile, offset string, 
 
 	//Construct Filelocation relative to the Teamroot or iGEM "File:" Page, for pages and files respectively
 	if file {
-		filename := filepath.Base(pathtofile)
+		filename := filepath.Base(pathToFile)
 		location = "T--" + teamname + "--" + filename
 		history_url, err = constructURL(year, teamname, location, file, false, false)
 		if err != nil {
@@ -128,7 +128,7 @@ func Upload(client *http.Client, year int, teamname, pathtofile, offset string, 
 		}
 
 	} 	else {
-		filename := strings.Split(filepath.Base(pathtofile), ".")[0]
+		filename := strings.Split(filepath.Base(pathToFile), ".")[0]
 		location = offset + filename
 		history_url, err = constructURL(year, teamname, location, file, false, true)
 		if err != nil {
@@ -145,7 +145,7 @@ func Upload(client *http.Client, year int, teamname, pathtofile, offset string, 
 	}
 
 	//Generate Hash for the Object that will be uploaded
-	fhash := gen_hash(pathtofile)
+	fhash := gen_hash(pathToFile)
 
 	//Check if the file already exists)
 	already_uploaded, err := alreadyUploaded(client, history_url, fhash, file)
@@ -161,7 +161,7 @@ func Upload(client *http.Client, year int, teamname, pathtofile, offset string, 
 
 	//Add the type specific data to the payload 
 	if file{
-		fh, err := os.Open(pathtofile)
+		fh, err := os.Open(pathToFile)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -170,7 +170,7 @@ func Upload(client *http.Client, year int, teamname, pathtofile, offset string, 
 		payload["wpUploadDescription"] = strings.NewReader("Hash:" + fhash)
 		payload["wpIgnoreWarning"] = strings.NewReader("1")
 	} else {
-		fh , err := ioutil.ReadFile(pathtofile)
+		fh , err := ioutil.ReadFile(pathToFile)
 		if err != nil {
 			log.Fatalln(err)
 		}
