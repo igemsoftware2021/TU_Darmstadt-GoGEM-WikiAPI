@@ -65,6 +65,7 @@ func alreadyUploaded(client *http.Client, url, fhash string, file bool) (bool, e
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		body, err := goquery.NewDocumentFromReader(resp.Body) // Parse the HTML body with goquery
 		if err != nil {
@@ -147,4 +148,25 @@ func createMIMEMultipart(payload map[string]io.Reader) (*bytes.Buffer, string) {
 	}
 	w.Close() // After we are done we need to close the form writer, so that the closing boundry is written to the buffer
 	return &b, w.FormDataContentType() // Return the buffer and the content type. In the content type the boundry is defined
+}
+
+func getAllPages(year int, teamname string) []string {
+	var pages []string
+	resp, err := http.Get(fmt.Sprintf("https://%d.igem.org/wiki/index.php?title=Special:PrefixIndex&prefix=Team:%s&namespace=0", year, teamname))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 200 {
+		body, err := goquery.NewDocumentFromReader(resp.Body) // Parse the HTML body with goquery
+		if err != nil {
+			log.Fatalln(err)
+		}
+		sel := body.Find("table[class=mw-prefixindex-list-table]") // Find all pages that are redirects
+		sel.Find("a").Each(func(i int, s *goquery.Selection) { // Find all links in the table
+			href := s.AttrOr("href","")
+			println(href)
+		})
+	}
+	return pages
 }

@@ -213,3 +213,9 @@ func Upload(client *http.Client, year int, teamname, pathToFile, offset string, 
 	return "Success! " + final_url
 
 }
+
+func Debug(year int, teamname string){
+
+	getAllPages(year, teamname)
+
+}
