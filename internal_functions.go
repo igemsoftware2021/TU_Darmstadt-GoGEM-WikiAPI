@@ -150,23 +150,23 @@ func createMIMEMultipart(payload map[string]io.Reader) (*bytes.Buffer, string) {
 	return &b, w.FormDataContentType() // Return the buffer and the content type. In the content type the boundry is defined
 }
 
-func getAllPages(year int, teamname string) []string {
+func getAllPages(url string, session *http.Client) ([]string, error) {
 	var pages []string
-	resp, err := http.Get(fmt.Sprintf("https://%d.igem.org/wiki/index.php?title=Special:PrefixIndex&prefix=Team:%s&namespace=0", year, teamname))
+	resp, err := session.Get(url)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		body, err := goquery.NewDocumentFromReader(resp.Body) // Parse the HTML body with goquery
 		if err != nil {
-			log.Fatalln(err)
+			return nil, err
 		}
 		sel := body.Find("table[class=mw-prefixindex-list-table]") // Find all pages that are redirects
 		sel.Find("a").Each(func(i int, s *goquery.Selection) { // Find all links in the table
 			href := s.AttrOr("href","")
-			println(href)
+			pages = append(pages, href)
 		})
 	}
-	return pages
+	return pages, nil
 }

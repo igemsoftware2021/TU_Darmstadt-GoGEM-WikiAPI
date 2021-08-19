@@ -2,6 +2,7 @@ package gogemwikiapi
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -271,8 +272,57 @@ func GetFileUrl(file_overview_url string, client *http.Client) (string, error){
 	return ret_url, nil
 }
 
-func Debug(year int, teamname string){
+func QueryPages(prefixURL, teamname, offset string, client *http.Client) ([]string, error) {
+	url := ""
+	if offset == "" {
+		url = fmt.Sprintf("%s&prefix=Team:%s&namespace=0&hideredirects=1", prefixURL, teamname)
+	} else {
+		url = fmt.Sprintf("%s&prefix=Team:%s/%s&namespace=0&hideredirects=1", prefixURL, teamname, offset)
+	}
+	return getAllPages(url, client)
+}
 
-	getAllPages(year, teamname)
+func DeletePage(pageurl string, year int, client *http.Client) error {
 
+	url := fmt.Sprintf("https://%d.igem.org%s", year, pageurl)
+
+	payload := getTokens(client, url + "?action=edit")
+	payload["wpTextbox1"] = strings.NewReader("")
+
+	form, data_type := createMIMEMultipart(payload) // Create the multipart form for the upload
+
+	req, err := http.NewRequest("POST", url + "?action=submit", form)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Content-Type", data_type)
+
+	// DEBUG: 
+	// reqDump, err := httputil.DumpRequest(req, true)
+	// println(string(reqDump))
+	// panic(err)
+
+	resp, err := client.Do(req) // Send the request
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 302 { // If we are not redirected further, we have an error
+		// println("Upload did probably fail. Status: " + fmt.Sprint(resp.StatusCode) +"... Continuing")
+		return errors.New("uploadDidFail")
+	}
+
+	for resp.StatusCode == 302 { // If we are redirected, we have to follow the redirect manually so we can gather all the cookies
+		loc_url, err := resp.Location()
+		if err != nil {
+			return err
+		}
+		resp, err = client.Get(strings.ReplaceAll(loc_url.String(), " ", "")) // Sometimes there are spaces in the URL, which causes problems, so we remove them
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
