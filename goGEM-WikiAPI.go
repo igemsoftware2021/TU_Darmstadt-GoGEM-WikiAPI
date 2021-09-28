@@ -287,7 +287,7 @@ func DeletePage(pageurl string, year int, client *http.Client) error {
 	url := fmt.Sprintf("https://%d.igem.org%s", year, pageurl)
 
 	payload := getTokens(client, url + "?action=edit")
-	payload["wpTextbox1"] = strings.NewReader("")
+	payload["wpTextbox1"] = strings.NewReader(`<div class="purged-page-empty"></div>`)
 
 	form, data_type := createMIMEMultipart(payload) // Create the multipart form for the upload
 
