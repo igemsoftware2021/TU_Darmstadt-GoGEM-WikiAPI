@@ -16,21 +16,33 @@ import (
 )
 
 // Construct a valid URL for the iGEM website, depending on Filetype and if it should be viewed or uploaded.
-func constructURL(year int, teamname, location string, file, upload, history bool) (string, error) {
+func constructURL(year int, teamname, location string, file, upload, history, redirect bool) (string, error) {
 	if file && upload{
 		return "https://" + fmt.Sprint(year) + ".igem.org/Special:Upload", nil
 	}
 	if file && !upload{
 		return "https://" + fmt.Sprint(year) + ".igem.org/File:" + location, nil
 	}
-	if !file && upload && !history{
-		return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "/" + location + "?action=submit", nil
-	}
-	if !file && !upload && history{
-		return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "/" + location + "?action=history", nil
-	}
-	if !file && !upload && !history{
-		return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "/" + location + "?action=edit", nil
+	if location == "" && redirect {
+		if !file && upload && !history{
+			return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "?action=submit", nil
+		}
+		if !file && !upload && history{
+			return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "?action=history", nil
+		}
+		if !file && !upload && !history{
+			return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "?action=edit", nil
+		}
+	} else{
+		if !file && upload && !history{
+			return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "/" + location + "?action=submit", nil
+		}
+		if !file && !upload && history{
+			return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "/" + location + "?action=history", nil
+		}
+		if !file && !upload && !history{
+			return "https://" + fmt.Sprint(year) + ".igem.org/Team:" + teamname + "/" + location + "?action=edit", nil
+		}
 	}
 	if !file && upload && history{
 		return "", errors.New("cannot upload and view history at the same time")
@@ -169,4 +181,31 @@ func getAllPages(url string, session *http.Client) ([]string, error) {
 		})
 	}
 	return pages, nil
+}
+
+func iGEMRequest(client *http.Client, req *http.Request) (string, error) {
+	resp, err := client.Do(req) // Send the request
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	final_url := ""
+
+	if resp.StatusCode != 302 { // If we are not redirected further, we have an error
+		// println("Upload did probably fail. Status: " + fmt.Sprint(resp.StatusCode) +"... Continuing")
+		return "", errors.New("uploadDidFail")
+	}
+
+	for resp.StatusCode == 302 { // If we are redirected, we have to follow the redirect manually so we can gather all the cookies
+		loc_url, err := resp.Location()
+		if err != nil {
+			return "", err
+		}
+		resp, err = client.Get(strings.ReplaceAll(loc_url.String(), " ", "")) // Sometimes there are spaces in the URL, which causes problems, so we remove them
+		if err != nil {
+			return "", err
+		}
+		final_url = loc_url.String()
+	}
+	return final_url, nil
 }

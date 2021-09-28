@@ -117,15 +117,15 @@ func Upload(client *http.Client, year int, teamname, pathToFile, offset string, 
 	if file {
 		filename = filepath.Base(pathToFile)
 		location = "T--" + teamname + "--" + filename
-		history_url, err = constructURL(year, teamname, location, file, false, false)
+		history_url, err = constructURL(year, teamname, location, file, false, false, false)
 		if err != nil {
 			return "", err
 		}
-		edit_url, err = constructURL(year, teamname, location, file, true, false)
+		edit_url, err = constructURL(year, teamname, location, file, true, false, false)
 		if err != nil {
 			return "", err
 		}
-		upload_url, err = constructURL(year, teamname, location, file, true, false)
+		upload_url, err = constructURL(year, teamname, location, file, true, false, false)
 		if err != nil {
 			return "", err
 		}
@@ -140,15 +140,15 @@ func Upload(client *http.Client, year int, teamname, pathToFile, offset string, 
 		} else {
 			location = offset
 		}
-		history_url, err = constructURL(year, teamname, location, file, false, true)
+		history_url, err = constructURL(year, teamname, location, file, false, true, false)
 		if err != nil {
 			return "", err
 		}
-		edit_url, err = constructURL(year, teamname, location, file, false, false)
+		edit_url, err = constructURL(year, teamname, location, file, false, false, false)
 		if err != nil {
 			return "", err
 		}
-		upload_url, err = constructURL(year, teamname, location, file, true, false)
+		upload_url, err = constructURL(year, teamname, location, file, true, false, false)
 		if err != nil {
 			return "", err
 		}
@@ -218,31 +218,38 @@ func Upload(client *http.Client, year int, teamname, pathToFile, offset string, 
 	// println(string(reqDump))
 	// panic(err)
 
-	resp, err := client.Do(req) // Send the request
+	return iGEMRequest(client, req)
+
+}
+
+func Redirect(client *http.Client, year int, teamname, source, target string) (string,error) {
+	edit_url, err := constructURL(year, teamname, source, false, false, false, true)
+	if err != nil {
+		return "",err
+	} 
+
+	upload_url, err := constructURL(year, teamname, source, false, true, false, true)
+	if err != nil {
+		return "",err
+	}
+
+	payload := getTokens(client, edit_url)
+	if target != "/"{
+		payload["wpTextbox1"] = strings.NewReader("#REDIRECT[[Team:" + teamname + "/" + target + "]]")
+	} else {
+		payload["wpTextbox1"] = strings.NewReader("#REDIRECT[[Team:" + teamname + target + "]]")
+	}
+
+	form, data_type := createMIMEMultipart(payload) // Create the multipart form for the upload
+
+	req, err := http.NewRequest("POST", upload_url, form)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	final_url := ""
 
-	if resp.StatusCode != 302 { // If we are not redirected further, we have an error
-		// println("Upload did probably fail. Status: " + fmt.Sprint(resp.StatusCode) +"... Continuing")
-		return "", errors.New("uploadDidFail")
-	}
+	req.Header.Add("Content-Type", data_type)
 
-	for resp.StatusCode == 302 { // If we are redirected, we have to follow the redirect manually so we can gather all the cookies
-		loc_url, err := resp.Location()
-		if err != nil {
-			return "", err
-		}
-		resp, err = client.Get(strings.ReplaceAll(loc_url.String(), " ", "")) // Sometimes there are spaces in the URL, which causes problems, so we remove them
-		if err != nil {
-			return "", err
-		}
-		final_url = loc_url.String()
-	}
-	println(final_url)
-	return final_url, nil
+	return iGEMRequest(client, req)
 
 }
 
