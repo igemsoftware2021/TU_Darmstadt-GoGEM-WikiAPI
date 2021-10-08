@@ -156,13 +156,12 @@ func Upload(client *http.Client, year int, teamname, pathToFile, offset string, 
 		// println(filename)
 		// println(location)
 	}
-
-	// DEBUG:
-	// println(history_url)
-	// println(edit_url)
-	// println(upload_url)
-	// println(pathToFile)
-	// panic(err)
+	// if !file {
+	// 	println("Location: " +location)
+	// 	println("History URL: " +history_url)
+	// 	println("-----------------------------------------------------------------")
+	// }
+	// return "", nil
 
 	//Generate Hash for the Object that will be uploaded
 	fhash := gen_hash(pathToFile)
@@ -218,7 +217,11 @@ func Upload(client *http.Client, year int, teamname, pathToFile, offset string, 
 	// println(string(reqDump))
 	// panic(err)
 
-	return iGEMRequest(client, req)
+	full_url, err := iGEMRequest(client, req)
+	if err != nil {
+		return "", err
+	}
+	return full_url, nil
 
 }
 
@@ -267,18 +270,19 @@ func GetFileUrl(file_overview_url string, client *http.Client) (string, error){
 	// dumpBody,_ := httputil.DumpResponse(resp, true)
 	// println(string(dumpBody))
 
-	body, err := goquery.NewDocumentFromReader(resp.Body)
+	body, err := goquery.NewDocumentFromReader(resp.Body) // Parse the HTML document which shows a image preview and the edit history
 	if err != nil {
 		return "", err
 	}
 
-	body.Find("div[class=fullMedia]").Each(func(i int, s *goquery.Selection) {
+	body.Find("div[class=fullMedia]").Each(func(i int, s *goquery.Selection) { // In the div with class fullMedia, find the image link
 		ret_url = s.Find("a").AttrOr("href", "")
 	})
 
 	return ret_url, nil
 }
 
+//TODO: remove hardcoded stuff
 func QueryPages(prefixURL, teamname, offset string, client *http.Client) ([]string, error) {
 	url := ""
 	if offset == "" {
