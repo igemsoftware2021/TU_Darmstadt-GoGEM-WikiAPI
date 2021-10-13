@@ -1,4 +1,4 @@
-module github.com/Jackd4w/goGEM-WikiAPI
+module github.com/Jackd4w/GoGEM-WikiAPI
 
 go 1.16
 
